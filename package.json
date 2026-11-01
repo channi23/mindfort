@@ -17,7 +17,8 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "lucide-react": "^0.468.0",
-    "motion": "^12.23.24"
+    "motion": "^12.23.24",
+    "@excalidraw/excalidraw": "^0.18.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
