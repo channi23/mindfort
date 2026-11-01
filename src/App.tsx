@@ -4,7 +4,7 @@ import { BlurFade } from './components/magicui/blur-fade'
 import { MagicCard } from './components/magicui/magic-card'
 import { FortressBlueprint } from './components/FortressBlueprint'
 import { Workspace, listSceneMemories, loadScene } from './components/ExcalidrawWorkspace'
-import { demo, fresh, isPalace, load, type Palace, type State } from './model'
+import { demo, fresh, isPalace, load, type State } from './model'
 import './native-editor.css'
 
 type Screen='library'|'editor'|'review'
