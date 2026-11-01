@@ -30,8 +30,18 @@ function IconObject({kind}:{kind:FurnitureKind}) {
 }
 function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}) {
  const ref=useRef<HTMLButtonElement>(null)
- useEffect(()=>{ref.current?.focus();const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose()};addEventListener('keydown',key);return()=>removeEventListener('keydown',key)},[onClose])
- return <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div role="dialog" aria-modal="true" aria-label={title} className="dialog"><div className="dialog-header"><h2>{title}</h2><button ref={ref} aria-label="Close" className="icon-button" onClick={onClose}><X size={19}/></button></div>{children}</div></div>
+ const dialogRef=useRef<HTMLDivElement>(null)
+ const onCloseRef=useRef(onClose)
+ onCloseRef.current=onClose
+ useEffect(()=>{
+  const field=dialogRef.current?.querySelector<HTMLElement>('input:not([type="hidden"]),textarea,select')
+  if(field) field.focus()
+  else ref.current?.focus()
+  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();onCloseRef.current()}}
+  addEventListener('keydown',key)
+  return()=>removeEventListener('keydown',key)
+ },[])
+ return <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} className="dialog"><div className="dialog-header"><h2>{title}</h2><button ref={ref} aria-label="Close" className="icon-button" onClick={onClose}><X size={19}/></button></div>{children}</div></div>
 }
 export function App(){
  const [state,setState]=useState<State>(load)
