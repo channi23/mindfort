@@ -61,3 +61,12 @@ test('reload keeps a newly-created fortress in browser storage',async({page})=>{
  await page.reload()
  await expect(page.getByText('Persistence Check').first()).toBeVisible()
 })
+
+test('the refreshed interface uses blueprint artwork and no emoji-driven fortress cards',async({page})=>{
+ await expect(page.locator('.hero-art .blueprint-map')).toBeVisible()
+ await expect(page.locator('.fort-preview .blueprint-map').first()).toBeVisible()
+ await expect(page.locator('.magic-card')).toHaveCount(1)
+ await expect(page.locator('.sidebar')).toHaveCSS('background-image',/linear-gradient/)
+ await expect(page.locator('.brand-mark')).toHaveCSS('background-image',/linear-gradient/)
+ await expect(page.getByRole('button',{name:'Build a fortress'})).toBeVisible()
+})
