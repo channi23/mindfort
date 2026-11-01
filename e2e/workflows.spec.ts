@@ -19,7 +19,7 @@ test('Excalidraw native editor opens for a saved fortress and shows memory tools
  await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
  await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
  await expect(page.locator('.excalidraw')).toBeVisible()
- await expect(page.getByText('Make the drawing memorable.')).toBeVisible()
+ await expect(page.getByText('Turn drawings into memories.')).toBeVisible()
  await expect(page.getByRole('button',{name:'Export scene'})).toBeVisible()
 })
 
