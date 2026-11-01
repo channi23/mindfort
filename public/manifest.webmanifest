@@ -1,0 +1,10 @@
+{
+  "name": "Mindfort | Visual Memory Palace",
+  "short_name": "Mindfort",
+  "description": "Build visual memory palaces, attach concepts to drawings, and practice active recall.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#58c7f3",
+  "icons": []
+}
