@@ -1,3 +1,4 @@
+import { MindfortMark } from './MindfortMark'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Excalidraw, convertToExcalidrawElements, MainMenu, WelcomeScreen } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
@@ -114,8 +115,8 @@ export function Workspace({palace,onBack,onRecall}:{palace:Palace;onBack:()=>voi
       <WelcomeScreen>
        <WelcomeScreen.Hints.ToolbarHint/>
        <WelcomeScreen.Center>
-        <WelcomeScreen.Center.Logo><div className="mf-welcome-logo">mindfort.</div></WelcomeScreen.Center.Logo>
-        <WelcomeScreen.Center.Heading>Give every idea a place to live.</WelcomeScreen.Center.Heading>
+        <WelcomeScreen.Center.Logo><div className="mf-welcome-logo"><MindfortMark size={42}/><span>mindfort.</span></div></WelcomeScreen.Center.Logo>
+        <WelcomeScreen.Center.Heading>Draw a place you know. Remember what you learn.</WelcomeScreen.Center.Heading>
         <WelcomeScreen.Center.Menu>
          <WelcomeScreen.Center.MenuItem icon={<FilePlus2 size={18}/>} onSelect={addRoom}>Draw your first room</WelcomeScreen.Center.MenuItem>
          <WelcomeScreen.Center.MenuItemHelp/>
@@ -125,15 +126,15 @@ export function Workspace({palace,onBack,onRecall}:{palace:Palace;onBack:()=>voi
     </Excalidraw>
    </div>
    <aside className="mf-memory-panel">
-    <div className="mf-panel-kicker"><Sparkles size={16}/> THE MEMORY LAYER</div>
-    <h2>Make the drawing memorable.</h2>
-    <p>Draw rooms with rectangles, place shapes or text inside them, then select any shape to attach a concept.</p>
+    <div className="mf-panel-kicker"><Sparkles size={16}/> MEMORY NOTES</div>
+    <h2>Turn drawings into memories.</h2>
+    <p>Draw a familiar place, select an object, and attach a concept. Later, revisit it in Recall.</p>
     <div className="mf-panel-stats"><span>{count}<small>canvas elements</small></span><span>{activeNotes}<small>memory anchors</small></span></div>
     <div className="mf-selected">
      <div className="mf-selected-heading">{selectedId?'Selected element':'Select a shape'}</div>
      {selectedId?<><p>{sceneRef.current.notes[selectedId]?.title||'This object has no memory yet.'}</p><button className="mf-pink" onClick={()=>openNote(selectedId)}><Edit3 size={16}/>{sceneRef.current.notes[selectedId]?'Edit memory':'Attach memory'}</button></>:<p>Click a rectangle, text, frame or object on the canvas to create a memory anchor.</p>}
     </div>
-    <div className="mf-panel-guide"><strong>How to build your fortress</strong><ol><li>Draw room outlines using Excalidraw's rectangle tool.</li><li>Add furniture symbols, text, or freehand sketches.</li><li>Select an object and attach a memorable association.</li><li>Use Recall to test your knowledge.</li></ol></div>
+    <div className="mf-panel-guide"><strong>Start in three steps</strong><ol><li>Draw a place you know using the rectangle tool.</li><li>Draw or label a familiar object, then select it.</li><li>Attach a concept and recall question. Open Recall when you're ready.</li></ol></div>
     <button className="mf-outline mf-full" onClick={exportScene}><Save size={15}/> Back up this fortress</button>
    </aside>
   </div>
