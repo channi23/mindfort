@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://channi23.github.io/mindfort/sitemap.xml
