@@ -1,52 +1,65 @@
 # Mindfort
 
-**Build a world of knowledge.** An interactive memory palace designed for studying. Turn everyday places into memorable associations and practice active recall.
+**Build a world of knowledge.** A visual, grid-based 2D memory palace builder for students.
 
-## Try it
+## Run
 
-The app lives in `index.html`. Open it in a modern browser or host it on any static web server.
-
-For a local development server:
+Requires Node.js 20.19+ or 22.12+.
 
 ```bash
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-Then visit http://localhost:8080.
+Open the URL printed by Vite (usually http://localhost:5173).
 
-## What's in the MVP
+For production:
+```bash
+npm run build
+npm run preview
+```
 
-- Create multiple subject fortresses.
-- Three rooms: kitchen, bedroom, living room.
-- Fifteen object anchors per fortress, including a refrigerator, cupboard, bed and bookshelf.
-- For each anchor, save a concept title, explanation, vivid mental association and recall question.
-- Recall mode hides the answer first, then lets you self-grade remembered / revisit.
-- Operating Systems sample memories show how to associate threads, mutexes, processes and virtual memory with household objects.
-- Browser-only local storage and downloadable JSON backups; no signup or servers.
+## Features (v0.2)
 
-## Deploy with GitHub Pages
+- Full React 19 + TypeScript + Vite application.
+- Draw rectangular rooms by clicking and dragging on a 24 × 16 grid.
+- Choose room names and floor colors; move empty rooms by dragging.
+- Place 12 furniture types and reposition furniture precisely on individual grid cells; rotate items.
+- Attach concepts, explanations, vivid associations, and active recall questions to furniture.
+- Review concepts with a question-first reveal and remembered/forgotten tracking.
+- Create multiple separate fortresses. Includes an example Operating Systems house.
+- Undo and redo the most recent 30 editor changes; grid zoom and responsive tool panels.
+- Browser-local persistence, JSON import/export backups, no login or backend.
 
-1. Go to the repository's **Settings → Pages**.
-2. Choose **Deploy from a branch**.
-3. Select the `main` branch and `/(root)` folder and save.
-4. GitHub Pages will show the published URL when the build completes.
+## How to build a memory house
 
-You can also deploy directly to Cloudflare Pages as a static site. No build command is required; use the root directory.
+1. Create a fortress for a subject, or open the Operating Systems example.
+2. Choose **Draw a room**, then drag a rectangle on an empty grid.
+3. Choose **Place furniture**, select an item, then click an empty cell inside a room.
+4. Select the furniture and choose **Attach memory**. Record the concept, a short explanation, an imaginative spatial association, and a recall question.
+5. Use **Practice recall** to hide answers and attempt retrieval before revealing them.
 
-## Privacy and important limits
+Tip: associate ideas with vivid, unusual events rather than plain labels. Example: four chefs sharing one refrigerator symbolizes threads sharing process memory.
 
-Data is saved to the current browser's `localStorage` only. **Clearing site data or switching devices can lose your work.** Export a JSON backup regularly and use Import to restore it. There is no cloud sync or cross-device account in this MVP.
+## Hosting
 
-Review counts are not scientifically calibrated recall probabilities, and self-grades are not objective tests. This project demonstrates a combination of spatial associations and retrieval practice. It does not guarantee improved memory.
+Deploy as a **Vite app** to Cloudflare Pages or another static host.
+- Build command: `npm run build`
+- Output directory: `dist`
+- No environment variables required.
 
-## Next development priorities
+For GitHub Pages, configure a build/deploy action that publishes `dist`. Do **not** deploy the source branch root directly; unlike v0.1 this app needs a build step. Vite `base: './'` supports relative asset paths.
 
-1. Replace emoji room layout with bespoke SVG/isometric scene illustrations, while preserving accessible furniture buttons.
-2. Add a richer visual association editor (drawings or user-supplied images).
-3. Create a more deliberate review queue using spaced-repetition scheduling.
-4. Provide import/export conflict handling and better accessibility testing.
-5. Run usability tests before adding educational articles or unobtrusive advertisements.
+## Data and privacy
 
-## Stack
+Data lives in `localStorage` on the current browser/device. Clearing site data removes the stored fortress. Always export a backup before clearing storage or changing devices. There is currently no account sync or server. An imported backup replaces the current data after confirmation.
 
-Dependency-free HTML, CSS and modern JavaScript. No build step and no external analytics or ad scripts.
+**Current limitations:** rooms are rectangles on a fixed-size grid; furniture occupies one logical cell; the editor has no character walking or 3D rendering. Room movement is restricted to empty rooms. Recall attempts are self-rated, not a scientifically calibrated memory score.
+
+## Tests
+
+`npm test` runs model geometry and validation tests with Node's built-in test runner (no test framework needed).
+
+## Prior prototype
+
+The first dependency-free single HTML prototype remains in the `main` branch until this new implementation is reviewed and merged.
