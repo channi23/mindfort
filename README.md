@@ -57,3 +57,11 @@ GitHub Actions validates the TypeScript build, geometry tests, and Chromium end-
 Cloudflare Pages: build command `npm run build`, output directory `dist`. This is a static Vite app, without backend environment variables.
 
 Excalidraw is MIT licensed. Keep its upstream attribution and follow its license when redistributing code.
+
+## Public website launch
+
+The `.github/workflows/pages.yml` workflow builds and deploys `main` to GitHub Pages. To enable this once, open the repository's **Settings → Pages** and select **GitHub Actions** as the build-and-deployment source. GitHub must allow Pages deployment for the repository. The expected project URL is https://channi23.github.io/mindfort/ after a successful deployment; do not assume the URL is live until the Pages action succeeds.
+
+SEO basics are included: descriptive HTML title and description, canonical URL, Open Graph metadata, WebApplication JSON-LD, `robots.txt`, `sitemap.xml`, and an original [memory palace guide](./public/memory-palace-guide.html). Search visibility and rankings are not guaranteed. Google Search Console requires ownership verification from the site owner.
+
+A [privacy page](./public/privacy.html) explains local storage and current third-party usage. No ad tracking or AdSense script is included. If ads are added later, update privacy disclosures, request any legally required user consent, and ensure AdSense approval before serving advertisements. GitHub Pages hosting itself is not a promise of ad-network approval.
