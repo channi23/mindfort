@@ -1,72 +1,51 @@
-import { test, expect } from '@playwright/test'
+import {test,expect} from '@playwright/test'
+
 test.beforeEach(async({page})=>{await page.goto('/')})
 
-test('creating a fortress retains input focus while typing and opens the editor',async({page})=>{
- await page.getByRole('button',{name:'Build a fortress'}).click()
- const field=page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('textbox',{name:'Fortress name'})
+test('landing page has a clear create flow without losing input focus',async({page})=>{
+ await expect(page.getByRole('heading',{name:/Think freely/})).toBeVisible()
+ await page.getByRole('button',{name:'Create a fortress'}).click()
+ const dialog=page.getByRole('dialog',{name:'Create a knowledge fortress'})
+ const field=dialog.getByRole('textbox',{name:'Fortress name'})
+ await field.pressSequentially('My Memory Fortress',{delay:35})
+ await expect(field).toHaveValue('My Memory Fortress')
  await expect(field).toBeFocused()
- await field.pressSequentially('My Memory Castle',{delay:45})
- await expect(field).toBeFocused()
- await expect(field).toHaveValue('My Memory Castle')
- await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
- await expect(page.getByRole('heading',{name:'My Memory Castle'})).toBeVisible()
- await expect(page.getByText('Start with a room')).toBeVisible()
+ await dialog.getByRole('button',{name:'Create fortress'}).click()
+ await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
+ await expect(page.getByText('My Memory Fortress').first()).toBeVisible()
 })
 
-test('build a room, place furniture, attach knowledge, and recall it',async({page})=>{
- await page.getByRole('button',{name:'Build a fortress'}).click()
- await page.getByRole('textbox',{name:'Fortress name'}).fill('Computer Science')
- await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
- await page.getByRole('button',{name:'Draw a room'}).click()
- const board=page.locator('.board')
- const rect=await board.boundingBox()
- expect(rect).toBeTruthy()
- const x=rect!.x,y=rect!.y,cell=42*.82
- await page.mouse.move(x+cell*1.5,y+cell*1.5)
- await page.mouse.down()
- await page.mouse.move(x+cell*5.5,y+cell*4.5,{steps:6})
- await page.mouse.up()
- await expect(page.locator('[data-room]')).toHaveCount(1)
- await page.getByRole('button',{name:'Place furniture'}).click()
- await page.getByRole('button',{name:'Refrigerator'}).click()
- await page.mouse.click(x+cell*2.5,y+cell*2.5)
- await expect(page.locator('[data-item]')).toHaveCount(1)
- await page.getByRole('button',{name:'Attach memory'}).click()
- const dialog=page.getByRole('dialog',{name:'Memory at Refrigerator'})
- await dialog.getByRole('textbox',{name:'Concept title'}).fill('Threads')
- await dialog.getByRole('textbox',{name:'Explanation'}).fill('Threads share process memory.')
- await dialog.getByRole('textbox',{name:'Vivid visual association'}).fill('Chefs share a giant fridge.')
- await dialog.getByRole('textbox',{name:'Active recall question'}).fill('What do threads share?')
- await dialog.getByRole('button',{name:'Save memory'}).click()
- await page.getByRole('button',{name:'Practice recall'}).last().click()
- await expect(page.getByText('What do threads share?')).toBeVisible()
+test('Excalidraw native editor opens for a saved fortress and shows memory tools',async({page})=>{
+ await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
+ await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
+ await expect(page.locator('.excalidraw')).toBeVisible()
+ await expect(page.getByText('Make the drawing memorable.')).toBeVisible()
+ await expect(page.getByRole('button',{name:'Export scene'})).toBeVisible()
+})
+
+test('returning to the library and re-opening the editor works',async({page})=>{
+ await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
+ await page.getByRole('button',{name:'Back to fortresses'}).click()
+ await expect(page.getByRole('heading',{name:'Fortresses'})).toBeVisible()
+ await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
+ await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
+})
+
+test('legacy memories are available in recall mode',async({page})=>{
+ await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
+ await page.getByRole('button',{name:'Recall',exact:true}).click()
+ await expect(page.getByText('What do threads share and what stays private?')).toBeVisible()
  await page.getByRole('button',{name:'Reveal memory'}).click()
- await expect(page.getByText('Chefs share a giant fridge.')).toBeVisible()
+ await expect(page.getByText(/four chefs use the same refrigerator/i)).toBeVisible()
  await page.getByRole('button',{name:'Remembered'}).click()
- await expect(page.getByText(/1 successful recalls/)).toBeVisible()
+ await expect(page.getByText('How do concurrency and parallelism differ?')).toBeVisible()
 })
 
-test('escape closes the create modal without destroying the underlying page',async({page})=>{
- await page.getByRole('button',{name:'Build a fortress'}).click()
- await page.getByRole('textbox',{name:'Fortress name'}).fill('No save')
- await page.keyboard.press('Escape')
- await expect(page.getByRole('dialog')).toHaveCount(0)
- await expect(page.getByRole('heading',{name:'Your knowledge fortresses'})).toBeVisible()
-})
-
-test('reload keeps a newly-created fortress in browser storage',async({page})=>{
- await page.getByRole('button',{name:'Build a fortress'}).click()
- await page.getByRole('textbox',{name:'Fortress name'}).fill('Persistence Check')
- await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
+test('a created fortress persists when the page reloads',async({page})=>{
+ await page.getByRole('button',{name:'Create a fortress'}).click()
+ await page.getByRole('textbox',{name:'Fortress name'}).fill('Persistent Palace')
+ await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress'}).click()
+ await page.getByRole('button',{name:'Back to fortresses'}).click()
  await page.reload()
- await expect(page.getByText('Persistence Check').first()).toBeVisible()
-})
-
-test('the refreshed interface uses blueprint artwork and no emoji-driven fortress cards',async({page})=>{
- await expect(page.locator('.hero-art .blueprint-map')).toBeVisible()
- await expect(page.locator('.fort-preview .blueprint-map').first()).toBeVisible()
- await expect(page.locator('.magic-card')).toHaveCount(1)
- await expect(page.locator('.sidebar')).toHaveCSS('background-image',/linear-gradient/)
- await expect(page.locator('.brand-mark')).toHaveCSS('background-image',/linear-gradient/)
- await expect(page.getByRole('button',{name:'Build a fortress'})).toBeVisible()
+ await expect(page.getByText('Persistent Palace')).toBeVisible()
 })
