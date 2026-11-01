@@ -16,7 +16,7 @@ export function fromLegacy(p:Palace):SceneRecord {
  const furnitureSkeletons=p.items.map(item=>({type:'rectangle' as const,id:'memory-'+item.id,x:item.x*cell,y:item.y*cell,width:cell-8,height:cell-8,strokeColor:item.title?'#e83e90':'#1988ad',backgroundColor:item.title?'#ffe5f1':'#dff6ff',fillStyle:'solid' as const,strokeWidth:2 as const,label:{text:item.title||item.kind,fontSize:14,strokeColor:'#163a50'}}))
  const notes:Record<string,MemoryNote>={}
  for(const item of p.items){if(item.title)notes['memory-'+item.id]={title:item.title,explanation:item.explanation,association:item.association,cue:item.cue}}
- return {elements:convertToExcalidrawElements([...roomSkeletons,...furnitureSkeletons]),files:{},notes,appState:{viewBackgroundColor:'#ffffff'}}
+ return {elements:convertToExcalidrawElements([...roomSkeletons,...furnitureSkeletons],{regenerateIds:false}),files:{},notes,appState:{viewBackgroundColor:'#ffffff'}}
 }
 export function loadScene(p:Palace):SceneRecord {
  try{
