@@ -65,3 +65,13 @@ The `.github/workflows/pages.yml` workflow builds and deploys `main` to GitHub P
 SEO basics are included: descriptive HTML title and description, canonical URL, Open Graph metadata, WebApplication JSON-LD, `robots.txt`, `sitemap.xml`, and an original [memory palace guide](./public/memory-palace-guide.html). Search visibility and rankings are not guaranteed. Google Search Console requires ownership verification from the site owner.
 
 A [privacy page](./public/privacy.html) explains local storage and current third-party usage. No ad tracking or AdSense script is included. If ads are added later, update privacy disclosures, request any legally required user consent, and ensure AdSense approval before serving advertisements. GitHub Pages hosting itself is not a promise of ad-network approval.
+
+## Product principles
+
+Every Mindfort change should pass these three checks:
+
+1. **Useful:** make studying or recalling information genuinely easier. Prioritize understandable workflows over decorative complexity.
+2. **Search-friendly:** publish original, helpful, crawlable learning resources with descriptive titles and accessible navigation. Do not promise Google rankings.
+3. **Human-intuitive:** write plain-language labels, maintain keyboard and mobile usability, and verify important paths in browser tests.
+
+**Visual identity:** Mindfort uses a six-dot triangle as its logo, sky-blue and hot-pink on white, and SVG/Lucide icons. No emoji in product UI or informational pages. Automated tests enforce this rule.

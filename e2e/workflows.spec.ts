@@ -19,7 +19,7 @@ test('Excalidraw native editor opens for a saved fortress and shows memory tools
  await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
  await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
  await expect(page.locator('.excalidraw')).toBeVisible()
- await expect(page.getByText('Make the drawing memorable.')).toBeVisible()
+ await expect(page.getByText('Turn drawings into memories.')).toBeVisible()
  await expect(page.getByRole('button',{name:'Export scene'})).toBeVisible()
 })
 
@@ -48,4 +48,17 @@ test('a created fortress persists when the page reloads',async({page})=>{
  await page.getByRole('button',{name:'Back to fortresses'}).click()
  await page.reload()
  await expect(page.getByText('Persistent Palace')).toBeVisible()
+})
+
+test('Mindfort dotmark replaces icon-based branding in navigation and editor',async({page})=>{
+ await expect(page.getByRole('button',{name:/mindfort/i}).first().locator('svg circle')).toHaveCount(6)
+ await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href','./favicon.svg')
+ await page.getByRole('button',{name:/Operating Systems.*Open canvas/}).click()
+ await expect(page.getByTestId('native-excalidraw-editor')).toBeVisible()
+ await expect(page.getByText('Turn drawings into memories.')).toBeVisible()
+})
+
+test('study guide and privacy policy are discoverable from home page',async({page})=>{
+ await expect(page.getByRole('link',{name:'How to build a memory palace'})).toHaveAttribute('href','./memory-palace-guide.html')
+ await expect(page.getByRole('link',{name:'Privacy policy'})).toHaveAttribute('href','./privacy.html')
 })
