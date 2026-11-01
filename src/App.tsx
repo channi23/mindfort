@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, BookOpen, Brain, Check, Download, Eraser, Grid2X2, Hand, Home, LayoutGrid, MousePointer2, Plus, RotateCw, Save, Shield, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react'
+import { ArrowLeft, BookOpen, Brain, Check, Download, Eraser, Grid2X2, Hand, Home, LayoutGrid, MousePointer2, Plus, Redo2, RotateCw, Save, Shield, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react'
 import { GRID, fresh, isPalace, load, palette, roomAt, roomColors, uid, validItemLocation, validRoom, type FurnitureKind, type Item, type Palace, type Room, type State } from './model'
 
 type Mode='select'|'room'|'furniture'|'erase'|'recall'
