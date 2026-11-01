@@ -1,7 +1,7 @@
 name: Validate Mindfort
 on:
   push:
-    branches: [main, feat/2d-fortress-builder]
+    branches: [main, feat/canvas-ux-and-e2e]
   pull_request:
     branches: [main]
 jobs:
@@ -15,3 +15,10 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: test-results/
