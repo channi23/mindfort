@@ -1,147 +1,80 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, BookOpen, Brain, Check, Download, Eraser, Grid2X2, Hand, Home, LayoutGrid, MousePointer2, Plus, Redo2, RotateCw, Save, Shield, Sparkles, Trash2, Undo2, Upload, X, ZoomIn, ZoomOut } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, BookOpen, Brain, Check, Download, FolderPlus, LayoutTemplate, Plus, Shield, Sparkles, Trash2, Upload, X } from 'lucide-react'
 import { BlurFade } from './components/magicui/blur-fade'
 import { MagicCard } from './components/magicui/magic-card'
 import { FortressBlueprint } from './components/FortressBlueprint'
-import { GRID, fresh, isPalace, load, palette, roomAt, roomColors, uid, validItemLocation, validRoom, type FurnitureKind, type Item, type Palace, type Room, type State } from './model'
+import { Workspace, listSceneMemories, loadScene } from './components/ExcalidrawWorkspace'
+import { demo, fresh, isPalace, load, type State } from './model'
+import './native-editor.css'
 
-type Mode='select'|'room'|'furniture'|'erase'|'recall'
-type Screen='library'|'builder'|'review'
-type Selection={kind:'item'|'room';id:string}|null
-type Draft={x:number;y:number;w:number;h:number}|null
-type Pointer={x:number;y:number;originX:number;originY:number;kind:'room'|'item';id:string}|null
-const cells=(n:number)=>n*GRID.size
-const clamp=(n:number,min:number,max:number)=>Math.max(min,Math.min(max,n))
-const objectLabel=(kind:FurnitureKind)=>palette.find(p=>p.kind===kind)?.label||kind
-const blank=(kind:FurnitureKind,x:number,y:number):Item=>({id:uid(),kind,x,y,rotation:0,title:'',explanation:'',association:'',cue:''})
-const clone=(p:Palace)=>JSON.parse(JSON.stringify(p)) as Palace
-function IconObject({kind}:{kind:FurnitureKind}) {
- switch(kind) {
- case 'fridge':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="4" width="30" height="40" rx="4" fill="#dceef5" stroke="#557f94" strokeWidth="2"/><path d="M9 23h30" stroke="#557f94" strokeWidth="2"/><path d="M15 13v6M15 28v7" stroke="#557f94" strokeWidth="3" strokeLinecap="round"/></svg>
- case 'bed':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="5" y="8" width="38" height="32" rx="4" fill="#d5b7e9" stroke="#9376b7" strokeWidth="2"/><rect x="8" y="12" width="15" height="11" rx="3" fill="#fff8f5"/><rect x="25" y="12" width="15" height="11" rx="3" fill="#fff8f5"/><path d="M5 27h38" stroke="#9376b7" strokeWidth="2"/></svg>
- case 'sofa':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="36" height="30" rx="8" fill="#f8b4a6" stroke="#c77d7d" strokeWidth="2"/><rect x="10" y="21" width="28" height="14" rx="4" fill="#ffd4c9" stroke="#c77d7d" strokeWidth="2"/><path d="M24 21v14" stroke="#c77d7d" strokeWidth="2"/></svg>
- case 'plant':return <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M16 27h16l-3 16H19z" fill="#c89174"/><ellipse cx="17" cy="18" rx="9" ry="13" fill="#8bca9f" transform="rotate(-35 17 18)"/><ellipse cx="30" cy="17" rx="9" ry="13" fill="#65ae8a" transform="rotate(32 30 17)"/><path d="M24 30V11" stroke="#468a6a" strokeWidth="2"/></svg>
- case 'lamp':return <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M15 9h18l8 17H7z" fill="#ffe0a4" stroke="#c39b65" strokeWidth="2"/><path d="M24 26v14M15 42h18" stroke="#a4878e" strokeWidth="3" strokeLinecap="round"/></svg>
- case 'table':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="9" width="36" height="30" rx="6" fill="#e5c29e" stroke="#b28b6c" strokeWidth="2"/><path d="M11 14h26v20H11z" stroke="#f7e1c5" strokeWidth="2" fill="none"/></svg>
- case 'stove':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="7" width="36" height="34" rx="4" fill="#c8cbd3" stroke="#777c8b" strokeWidth="2"/><circle cx="17" cy="18" r="6" fill="#414a58"/><circle cx="31" cy="18" r="6" fill="#414a58"/><path d="M12 32h24" stroke="#777c8b" strokeWidth="3"/></svg>
- case 'desk':return <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 15h36v20H6z" fill="#d8ac80" stroke="#9d7658" strokeWidth="2"/><rect x="10" y="20" width="20" height="11" rx="2" fill="#fae9d6"/><rect x="33" y="20" width="6" height="11" rx="1" fill="#ae8062"/></svg>
- case 'shelf':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="4" width="36" height="40" rx="2" fill="#b88a6b" stroke="#906347" strokeWidth="2"/><path d="M7 17h34M7 30h34" stroke="#906347" strokeWidth="3"/><path d="M12 7v8M18 8v7M25 6v9M32 8v7M14 20v8M23 19v9M31 20v8M13 33v9M21 32v10M31 34v8" stroke="#f4dfad" strokeWidth="4"/></svg>
- case 'board':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="8" width="40" height="29" rx="2" fill="#fcfff5" stroke="#8daaa8" strokeWidth="3"/><path d="M12 18h20M12 25h14" stroke="#b9d2cc" strokeWidth="3" strokeLinecap="round"/></svg>
- case 'door':return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="12" y="3" width="24" height="42" rx="2" fill="#dab28d" stroke="#9a725b" strokeWidth="2"/><circle cx="31" cy="26" r="2" fill="#fff1a9"/></svg>
- default:return <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="7" y="10" width="34" height="30" rx="4" fill="#e7c5a1" stroke="#ad8868" strokeWidth="2"/><path d="M7 20h34M24 20v20" stroke="#ad8868" strokeWidth="2"/></svg>
- }
-}
-function Modal({title,onClose,children}:{title:string;onClose:()=>void;children:React.ReactNode}) {
- const ref=useRef<HTMLButtonElement>(null)
- const dialogRef=useRef<HTMLDivElement>(null)
- const onCloseRef=useRef(onClose)
- onCloseRef.current=onClose
- useEffect(()=>{
-  const field=dialogRef.current?.querySelector<HTMLElement>('input:not([type="hidden"]),textarea,select')
-  if(field) field.focus()
-  else ref.current?.focus()
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'){e.stopPropagation();onCloseRef.current()}}
-  addEventListener('keydown',key)
-  return()=>removeEventListener('keydown',key)
- },[])
- return <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} className="dialog"><div className="dialog-header"><h2>{title}</h2><button ref={ref} aria-label="Close" className="icon-button" onClick={onClose}><X size={19}/></button></div>{children}</div></div>
+type Screen='library'|'editor'|'review'
+type Backup={kind:'mindfort-workspace-v2';state:State;scenes:Record<string,ReturnType<typeof loadScene>>}
+const stateKey='mindfort:builder-v2'
+const sceneKey=(id:string)=>'mindfort:excalidraw:'+id
+const freshData=()=>{try{return load()}catch{return {palaces:[demo()]}}}
+function download(name:string,body:string){
+ const url=URL.createObjectURL(new Blob([body],{type:'application/json'}))
+ const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1200)
 }
 export function App(){
- const [state,setState]=useState<State>(load)
+ const [state,setState]=useState<State>(freshData)
  const [screen,setScreen]=useState<Screen>('library')
- const [palaceId,setPalaceId]=useState<string|null>(null)
- const [mode,setMode]=useState<Mode>('select')
- const [furniture,setFurniture]=useState<FurnitureKind>('fridge')
- const [selection,setSelection]=useState<Selection>(null)
- const [draft,setDraft]=useState<Draft>(null)
- const [pointer,setPointer]=useState<Pointer>(null)
- const [zoom,setZoom]=useState(.82)
- const [hoverCell,setHoverCell]=useState<{x:number;y:number}|null>(null)
- const [showGrid,setShowGrid]=useState(true)
- const [roomName,setRoomName]=useState('New room')
- const [color,setColor]=useState(roomColors[0])
+ const [selected,setSelected]=useState<string|null>(null)
  const [showCreate,setShowCreate]=useState(false)
  const [newName,setNewName]=useState('')
- const [editItem,setEditItem]=useState<string|null>(null)
- const [toast,setToast]=useState('')
- const [storageError,setStorageError]=useState(false)
+ const [showImport,setShowImport]=useState(false)
  const [reviewIndex,setReviewIndex]=useState(0)
  const [revealed,setRevealed]=useState(false)
- const [history,setHistory]=useState<Palace[]>([])
- const [future,setFuture]=useState<Palace[]>([])
- const fileInput=useRef<HTMLInputElement>(null)
- const stage=useRef<HTMLDivElement>(null)
- const roomAnchor=useRef<{x:number;y:number}|null>(null)
- const p=state.palaces.find(v=>v.id===palaceId)??null
- const selectedItem=selection?.kind==='item'?p?.items.find(i=>i.id===selection.id):null
- const selectedRoom=selection?.kind==='room'?p?.rooms.find(r=>r.id===selection.id):null
- const currentEdit=p?.items.find(i=>i.id===editItem)
- const learned=p?.items.filter(i=>i.title.trim()&&i.cue.trim())??[]
- const currentReview=learned.length?learned[reviewIndex%learned.length]:null
- const activeRoom=p&&currentReview?roomAt(p,currentReview.x,currentReview.y):null
- const stats=useMemo(()=>({rooms:p?.rooms.length??0,items:p?.items.length??0,notes:learned.length,reviews:p?.reviews.length??0}),[p,learned.length])
- useEffect(()=>{try{localStorage.setItem('mindfort:builder-v2',JSON.stringify(state));setStorageError(false)}catch{setStorageError(true)}},[state])
- useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(''),3200);return()=>clearTimeout(t)},[toast])
- function update(fn:(prev:Palace)=>Palace){if(!p)return;const before=clone(p);const next=fn(clone(p));if(JSON.stringify(before)===JSON.stringify(next))return;next.updatedAt=Date.now();setHistory(h=>[...h.slice(-29),before]);setFuture([]);setState(s=>({...s,palaces:s.palaces.map(v=>v.id===p.id?next:v)}))}
- function swapHistory(from:Palace[],setFrom:React.Dispatch<React.SetStateAction<Palace[]>>,setTo:React.Dispatch<React.SetStateAction<Palace[]>>){if(!p||!from.length)return;const prior=from[from.length-1];setTo(a=>[...a.slice(-29),clone(p)]);setFrom(a=>a.slice(0,-1));setState(s=>({...s,palaces:s.palaces.map(v=>v.id===p.id?prior:v)}))}
- function undo(){swapHistory(history,setHistory,setFuture)}
- function redo(){swapHistory(future,setFuture,setHistory)}
- function open(id:string){setPalaceId(id);setScreen('builder');setSelection(null);setHistory([]);setFuture([]);setMode('select')}
- function create(){if(!newName.trim())return;const palace=fresh(newName.trim());setState(s=>({...s,palaces:[palace,...s.palaces]}));setShowCreate(false);setNewName('');open(palace.id)}
- function removePalace(){if(!p||!confirm('Delete this entire fortress and all of its memories?'))return;setState(s=>({...s,palaces:s.palaces.filter(v=>v.id!==p.id)}));setScreen('library');setPalaceId(null)}
- function exportBackup(){const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='mindfort-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
- async function importBackup(file?:File){if(!file)return;try{if(file.size>3e6)throw Error('Too large');const raw:unknown=JSON.parse(await file.text());if(!raw||typeof raw!=='object'||!Array.isArray((raw as State).palaces)||!(raw as State).palaces.every(isPalace))throw Error('Invalid');if(confirm('Replace all your fortresses with the imported backup?')){setState(raw as State);setScreen('library');setPalaceId(null);setToast('Backup restored')}}catch{setToast('Invalid backup file')}finally{if(fileInput.current)fileInput.current.value=''}}
- function stageCell(e:React.PointerEvent){const box=stage.current!.getBoundingClientRect();return{x:clamp(Math.floor((e.clientX-box.left)/zoom/GRID.size),0,GRID.cols-1),y:clamp(Math.floor((e.clientY-box.top)/zoom/GRID.size),0,GRID.rows-1)}}
- function begin(e:React.PointerEvent){if(!p||screen!=='builder'||e.button!==0)return;const c=stageCell(e);const element=e.target as HTMLElement;const furnitureNode=element.closest<HTMLElement>('[data-item]');const roomNode=element.closest<HTMLElement>('[data-room]');const item=furnitureNode?.dataset.item;const room=roomNode?.dataset.room;
- if(mode==='room'){setSelection(null);roomAnchor.current=c;setDraft({x:c.x,y:c.y,w:1,h:1});stage.current?.setPointerCapture(e.pointerId);return}
- if(mode==='furniture'){if(!validItemLocation(p,c.x,c.y)){setToast('Place furniture inside an empty room cell');return}const next=blank(furniture,c.x,c.y);update(x=>({...x,items:[...x.items,next]}));setSelection({kind:'item',id:next.id});return}
- if(mode==='erase'){if(item){update(x=>({...x,items:x.items.filter(v=>v.id!==item)}));setSelection(null)}else if(room){const target=p.rooms.find(r=>r.id===room)!;if(confirm('Remove room and furniture inside it?'))update(x=>({...x,rooms:x.rooms.filter(r=>r.id!==room),items:x.items.filter(i=>!(i.x>=target.x&&i.x<target.x+target.w&&i.y>=target.y&&i.y<target.y+target.h))}));setSelection(null)}return}
- if(item){const thing=p.items.find(i=>i.id===item)!;setSelection({kind:'item',id:item});setPointer({kind:'item',id:item,x:c.x,y:c.y,originX:thing.x,originY:thing.y});stage.current?.setPointerCapture(e.pointerId)}
- else if(room){const thing=p.rooms.find(r=>r.id===room)!;setSelection({kind:'room',id:room});setPointer({kind:'room',id:room,x:c.x,y:c.y,originX:thing.x,originY:thing.y});stage.current?.setPointerCapture(e.pointerId)}
- else setSelection(null)}
- function move(e:React.PointerEvent){if(!p)return;const c=stageCell(e);setHoverCell(c);if(draft&&roomAnchor.current){const a=roomAnchor.current;setDraft({x:Math.min(a.x,c.x),y:Math.min(a.y,c.y),w:Math.abs(c.x-a.x)+1,h:Math.abs(c.y-a.y)+1});return}if(pointer){const dx=c.x-pointer.x,dy=c.y-pointer.y;const el=stage.current?.querySelector<HTMLElement>('[data-'+pointer.kind+'="'+pointer.id+'"]');if(el){el.style.setProperty('--drag-x',String(dx*GRID.size));el.style.setProperty('--drag-y',String(dy*GRID.size))}}}
- function end(e:React.PointerEvent){if(!p)return;const c=stageCell(e);if(draft&&roomAnchor.current){const a=roomAnchor.current;const x=Math.min(a.x,c.x),y=Math.min(a.y,c.y),w=Math.abs(c.x-a.x)+1,h=Math.abs(c.y-a.y)+1;const r:Room={id:uid(),name:roomName.trim()||'Room',x,y,w,h,color};if(validRoom(p,r)){update(s=>({...s,rooms:[...s.rooms,r]}));setSelection({kind:'room',id:r.id});setMode('select')}else setToast('Room is too small, outside the board, or overlaps another room');setDraft(null);roomAnchor.current=null}
- if(pointer){const dragged=stage.current?.querySelector<HTMLElement>('[data-'+pointer.kind+'="'+pointer.id+'"]');dragged?.style.removeProperty('--drag-x');dragged?.style.removeProperty('--drag-y');const dx=c.x-pointer.x,dy=c.y-pointer.y;const x=pointer.originX+dx,y=pointer.originY+dy;if(dx||dy){if(pointer.kind==='item'){if(validItemLocation(p,x,y,pointer.id))update(s=>({...s,items:s.items.map(i=>i.id===pointer.id?{...i,x,y}:i)}));else setToast('Furniture must stay in an unoccupied room cell')}else{const existing=p.rooms.find(r=>r.id===pointer.id)!;const moved={...existing,x,y};if(validRoom(p,moved,pointer.id))update(s=>({...s,rooms:s.rooms.map(r=>r.id===pointer.id?moved:r),items:s.items.map(i=>i.x>=existing.x&&i.x<existing.x+existing.w&&i.y>=existing.y&&i.y<existing.y+existing.h?{...i,x:i.x+dx,y:i.y+dy}:i)}));else setToast('Room cannot overlap another room or leave the canvas')}}setPointer(null)}
- if(stage.current?.hasPointerCapture(e.pointerId))stage.current.releasePointerCapture(e.pointerId)}
- function rotate(){if(selectedItem)update(s=>({...s,items:s.items.map(i=>i.id===selectedItem.id?{...i,rotation:(i.rotation+90)%360}:i)}))}
- function deleteSelection(){if(!selection)return;if(selection.kind==='item')update(s=>({...s,items:s.items.filter(i=>i.id!==selection.id)}));else if(p){const r=p.rooms.find(v=>v.id===selection.id)!;if(!confirm('Remove room and its furniture?'))return;update(s=>({...s,rooms:s.rooms.filter(v=>v.id!==r.id),items:s.items.filter(i=>!(i.x>=r.x&&i.x<r.x+r.w&&i.y>=r.y&&i.y<r.y+r.h))}))}setSelection(null)}
- function updateNote(form:FormData){if(!currentEdit)return;update(s=>({...s,items:s.items.map(i=>i.id===currentEdit.id?{...i,title:String(form.get('title')??'').trim(),explanation:String(form.get('explanation')??'').trim(),association:String(form.get('association')??'').trim(),cue:String(form.get('cue')??'').trim()}:i)}));setEditItem(null);setToast('Memory attached to object')}
- useEffect(()=>{
-  const onKey=(e:KeyboardEvent)=>{
-   const target=e.target as HTMLElement|null
-   if(target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]'))return
-   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){
-    e.preventDefault()
-    if(e.shiftKey)redo();else undo()
-    return
-   }
-   if(screen!=='builder'||e.metaKey||e.ctrlKey||e.altKey)return
-   const k=e.key.toLowerCase()
-   if(k==='v')setMode('select')
-   if(k==='r')setMode('room')
-   if(k==='f')setMode('furniture')
-   if(k==='e')setMode('erase')
-   if(k==='escape'){setSelection(null);setMode('select')}
-   if((k==='delete'||k==='backspace')&&selection)deleteSelection()
-  }
-  window.addEventListener('keydown',onKey)
-  return()=>window.removeEventListener('keydown',onKey)
- })
- function reviewRemember(remembered:boolean){if(!p||!currentReview)return;update(s=>({...s,reviews:[...s.reviews,{itemId:currentReview.id,remembered,at:new Date().toISOString()}]}));setReviewIndex(n=>n+1);setRevealed(false)}
- return <div className="app-shell">
-  <aside className="sidebar"><button className="brand" onClick={()=>setScreen('library')}><span className="brand-mark"><Shield size={20}/></span><span>mindfort<span className="brand-dot">.</span></span></button><div className="aside-label">WORKSPACE</div><button className={'side-link '+(screen==='library'?'active':'')} onClick={()=>setScreen('library')}><Home size={17}/> My fortresses</button>{p&&<><button className={'side-link '+(screen==='builder'?'active':'')} onClick={()=>setScreen('builder')}><LayoutGrid size={17}/> Fortress builder</button><button className={'side-link '+(screen==='review'?'active':'')} onClick={()=>{setReviewIndex(0);setRevealed(false);setScreen('review')}}><Brain size={17}/> Recall practice</button></>}<div className="aside-label spaced">YOUR WORLDS</div>{state.palaces.map(v=><button className="side-link palace-link" key={v.id} onClick={()=>open(v.id)}><Shield size={15}/> <span>{v.name}</span></button>)}<button className="side-link" onClick={()=>setShowCreate(true)}><Plus size={17}/> Create fortress</button><div className="aside-bottom"><div className="side-tip"><Sparkles size={18}/><strong>Make it memorable</strong><p>Build a real place for each idea. A vivid mental image is your secret weapon.</p></div><span>Private by design · Saved locally</span></div></aside>
-  <main className="content"><header className="topbar"><span><button className="breadcrumb" onClick={()=>setScreen('library')}>My fortresses</button>{p&&<> / <button className="breadcrumb" onClick={()=>setScreen('builder')}>{p.name}</button></>}</span><div className="top-actions"><button onClick={exportBackup}><Download size={15}/> Export</button><button onClick={()=>fileInput.current?.click()}><Upload size={15}/> Import</button></div></header>
- {storageError&&<div className="warning">Browser storage is full or unavailable. Export a backup to protect your work.</div>}
- {screen==='library'&&<div className="library"><div className="hero"><BlurFade className="hero-copy" delay={0.05}><div className="eyebrow">THE WORLD INSIDE YOUR MIND</div><h1>Build a place for <em>every idea.</em></h1><p>Create your own rooms. Place objects with precision. Attach knowledge to the spaces you can picture and retrieve it whenever you need.</p><div className="button-row"><button className="button primary" onClick={()=>setShowCreate(true)}><Plus size={17}/> Build a fortress</button>{state.palaces.length>0&&<button className="button ghost" onClick={()=>open(state.palaces[0].id)}>Explore demo <ArrowLeft className="flip" size={16}/></button>}</div></BlurFade><BlurFade className="hero-art" delay={0.15}><FortressBlueprint/></BlurFade></div><div className="section-header"><div><div className="eyebrow">YOUR COLLECTION</div><h2>Your knowledge fortresses</h2></div><span>{state.palaces.length} fortress{state.palaces.length===1?'':'es'}</span></div><div className="fort-grid">{state.palaces.map((v,index)=><MagicCard key={v.id} className={'fortress-magic-card fortress-theme-'+(index%3)}><button className="fort-card" onClick={()=>open(v.id)}><div className="fort-preview"><FortressBlueprint compact/></div><div className="fort-body"><span className="tag">KNOWLEDGE WORLD</span><h3>{v.name}</h3><p>{v.rooms.length} rooms · {v.items.length} objects · {v.items.filter(i=>i.title).length} memories</p><div className="fort-link">Continue building →</div></div></button></MagicCard>)}<button className="fort-add" onClick={()=>setShowCreate(true)}><Plus size={31}/><strong>Create a new fortress</strong><span>Your next idea deserves a home.</span></button></div><div className="benefits"><div><span>01 / BUILD</span><h3>Shape your space</h3><p>Draw rooms on a grid and furnish them your way.</p></div><div><span>02 / ASSOCIATE</span><h3>Anchor an idea</h3><p>Give each object a concept and vivid mental story.</p></div><div><span>03 / RECALL</span><h3>Walk through memory</h3><p>Try recalling before revealing the explanation.</p></div></div></div>}
- {screen==='builder'&&p&&<div className="builder"><div className="builder-header"><div><div className="eyebrow">INTERACTIVE KNOWLEDGE WORLD</div><h1>{p.name}</h1><p>Build rooms, arrange furniture, and give every concept a physical place.</p></div><div className="builder-stats"><div><strong>{stats.rooms}</strong>Rooms</div><div><strong>{stats.items}</strong>Objects</div><div><strong>{stats.notes}</strong>Memories</div></div></div><div className="workspace"><div className="tools-panel"><div className="panel-heading">BUILDER TOOLS</div><div className="toolset">{([['select',MousePointer2,'Select & move'],['room',Grid2X2,'Draw a room'],['furniture',Plus,'Place furniture'],['erase',Eraser,'Erase']] as const).map(([m,Icon,label])=><button key={m} title={label} className={'tool '+(mode===m?'chosen':'')} onClick={()=>{setMode(m);setSelection(null)}}><Icon size={19}/><span>{label}</span></button>)}</div>{mode==='room'&&<div className="tool-config"><label>Room name<input maxLength={40} value={roomName} onChange={e=>setRoomName(e.target.value)}/></label><span>Floor color</span><div className="color-row">{roomColors.map(c=><button aria-label={'Select '+c} key={c} className={color===c?'color active':''} style={{background:c}} onClick={()=>setColor(c)}/>)}</div><p>Drag on an empty grid to draw a room, at least 2×2 cells.</p></div>}{mode==='furniture'&&<div className="tool-config"><div className="mini-heading">FURNITURE LIBRARY</div><div className="furniture-grid">{palette.map(v=><button title={v.label} key={v.kind} className={'furniture-choice '+(furniture===v.kind?'chosen':'')} onClick={()=>setFurniture(v.kind)}><IconObject kind={v.kind}/><span>{v.label}</span></button>)}</div><p>Choose furniture, then click any empty cell inside a room.</p></div>}{mode==='select'&&<div className="tool-config"><p>Drag objects to reposition them. Click an object to attach a concept.</p><p>Select a room to rename it or change its color.</p></div>}{mode==='erase'&&<div className="tool-config"><p>Click an object to erase it. Removing a room also removes objects inside it.</p></div>}<div className="panel-footer"><span><span className="key">↖</span> Snap to grid</span><span><span className="key">↻</span> Undo / redo</span></div></div>
- <div className="canvas-panel"><div className="canvas-toolbar"><div><span className="status-dot"/> BUILD MODE <span className="separator">/</span> {mode==='room'?'Drag to draw a room':mode==='furniture'?'Click to place '+objectLabel(furniture):mode==='erase'?'Click to erase':'Click to select · drag to move'}</div><div className="canvas-controls"><button title="Undo" disabled={!history.length} onClick={undo}><Undo2 size={16}/></button><button title="Redo" disabled={!future.length} onClick={redo}><Redo2 size={16}/></button><span className="separator">|</span><button title="Zoom out" onClick={()=>setZoom(z=>clamp(Number((z-.1).toFixed(2)),.4,1.5))}><ZoomOut size={17}/></button><span className="zoom-indicator">{Math.round(zoom*100)}%</span><button title={showGrid?'Hide grid':'Show grid'} aria-label={showGrid?'Hide grid':'Show grid'} onClick={()=>setShowGrid(v=>!v)}><Grid2X2 size={16}/></button><button title="Zoom in" onClick={()=>setZoom(z=>clamp(Number((z+.1).toFixed(2)),.4,1.5))}><ZoomIn size={17}/></button></div></div><div className="canvas-scroll"><div className="canvas-scaled" style={{width:cells(GRID.cols)*zoom,height:cells(GRID.rows)*zoom}}><div ref={stage} className={'board mode-'+mode+(showGrid?'':' grid-hidden')} style={{width:cells(GRID.cols),height:cells(GRID.rows),transform:'scale('+zoom+')'}} onPointerDown={begin} onPointerMove={move} onPointerLeave={()=>{if(!draft&&!pointer)setHoverCell(null)}} onPointerUp={end} onPointerCancel={()=>{stage.current?.querySelectorAll<HTMLElement>('[data-room],[data-item]').forEach(el=>{el.style.removeProperty('--drag-x');el.style.removeProperty('--drag-y')});setDraft(null);roomAnchor.current=null;setPointer(null)}}>{p.rooms.map(r=><div data-room={r.id} className={'room '+(selection?.id===r.id?'selected':'')} key={r.id} style={{left:cells(r.x),top:cells(r.y),width:cells(r.w),height:cells(r.h),backgroundColor:r.color}}><div className="room-label">{r.name}</div></div>)}{p.items.map(i=><button type="button" aria-label={i.title||objectLabel(i.kind)} data-item={i.id} key={i.id} className={'placed-item '+(selection?.id===i.id?'selected':'')} style={{left:cells(i.x)+3,top:cells(i.y)+3,width:GRID.size-6,height:GRID.size-6,transform:'translate(var(--drag-x,0px),var(--drag-y,0px)) rotate('+i.rotation+'deg)'}} onDoubleClick={()=>setEditItem(i.id)} title={(i.title||objectLabel(i.kind))+' — double-click to edit'}><IconObject kind={i.kind}/>{i.title&&<span className="memory-dot"/>}</button>)}{p.rooms.length===0&&!draft&&<div className="canvas-empty-help"><span>YOUR FIRST BUILD</span><strong>Start with a room</strong><p>Choose “Draw a room” on the left, then drag a rectangle on this canvas. Add objects to give your knowledge a home.</p><button type="button" onPointerDown={e=>e.stopPropagation()} onClick={()=>setMode('room')}>Draw my first room →</button></div>}{hoverCell&&mode==='furniture'&&!draft&&!pointer&&<div className={'ghost-item '+(validItemLocation(p,hoverCell.x,hoverCell.y)?'allowed':'blocked')} style={{left:cells(hoverCell.x)+3,top:cells(hoverCell.y)+3,width:GRID.size-6,height:GRID.size-6}}><IconObject kind={furniture}/></div>}{draft&&<div className="draft-room" style={{left:cells(draft.x),top:cells(draft.y),width:cells(draft.w),height:cells(draft.h)}}/>}</div></div></div><div className="canvas-footer"><span><Grid2X2 size={14}/> {GRID.cols} × {GRID.rows} grid</span><span>Tip: select furniture to attach a memory · V select · R room · F furniture · E erase</span></div></div>
- <aside className="inspector"><div className="panel-heading">PROPERTIES</div>{selectedItem?<><div className="inspect-art"><IconObject kind={selectedItem.kind}/></div><div className="inspect-title">{objectLabel(selectedItem.kind)}</div><div className="inspect-subtitle">Furniture object</div><div className="inspect-fields"><label>Grid coordinates <span>{selectedItem.x}, {selectedItem.y}</span></label><label>Rotation <span>{selectedItem.rotation}°</span></label><label>Attached memory <span>{selectedItem.title?'✓ Yes':'None'}</span></label></div><button className="button primary full" onClick={()=>setEditItem(selectedItem.id)}><BookOpen size={16}/>{selectedItem.title?'Edit memory':'Attach memory'}</button><button className="button ghost full" onClick={rotate}><RotateCw size={16}/> Rotate 90°</button><button className="button danger full" onClick={deleteSelection}><Trash2 size={15}/> Remove object</button></>:selectedRoom?<><h3 className="inspect-title">Room settings</h3><label className="input-label">Name<input value={selectedRoom.name} onChange={e=>{const name=e.target.value;setState(s=>({...s,palaces:s.palaces.map(v=>v.id===p.id?{...v,rooms:v.rooms.map(r=>r.id===selectedRoom.id?{...r,name}:r)}:v)}))}}/></label><div className="mini-heading">FLOOR COLOR</div><div className="color-row">{roomColors.map(c=><button aria-label={'Select '+c} key={c} className={selectedRoom.color===c?'color active':'color'} style={{background:c}} onClick={()=>update(v=>({...v,rooms:v.rooms.map(r=>r.id===selectedRoom.id?{...r,color:c}:r)}))}/>)}</div><p className="muted small">Size: {selectedRoom.w} × {selectedRoom.h} cells. Drag a room with Select to move all furniture inside it.</p><button className="button danger full" onClick={deleteSelection}><Trash2 size={15}/> Delete room</button></>:<div className="nothing-selected"><div className="nothing-icon">✧</div><h3>Make your world yours</h3><p>Select a room or furniture to inspect it. Add a memory to an object and watch your knowledge fortress grow.</p></div>}<div className="inspector-bottom"><button className="button primary full" onClick={()=>{setReviewIndex(0);setRevealed(false);setScreen('review')}}><Brain size={16}/> Practice recall</button><p>{stats.notes} of {stats.items} objects hold a memory</p></div></aside></div><div className="builder-footnote"><Shield size={15}/> Saved in this browser. Export backups regularly. <button onClick={exportBackup}>Download JSON backup</button><button className="delete-fort" onClick={removePalace}>Delete fortress</button></div></div>}
- {screen==='review'&&p&&<div className="review-page"><button className="breadcrumb back" onClick={()=>setScreen('builder')}><ArrowLeft size={16}/> Back to builder</button><div className="eyebrow centered">MEMORY RETRIEVAL PRACTICE</div><h1>Walk through your memories.</h1><p className="review-intro">Picture each location before revealing the concept. Remember the story, not just the words.</p>{currentReview?<><div className="review-counter">Memory {(reviewIndex%learned.length)+1} of {learned.length} · {p.reviews.filter(r=>r.remembered).length} successful recalls</div><div className="review-card"><div className="review-place"><div className="review-object"><IconObject kind={currentReview.kind}/></div><div><span>IMAGINE THIS LOCATION</span><h2>{objectLabel(currentReview.kind)}</h2><p>{activeRoom?.name??'Your fortress'}</p></div></div><div className="review-content"><span className="eyebrow">RECALL PROMPT</span><h2>{currentReview.cue}</h2>{revealed?<div className="revealed"><span className="tag">MEMORY</span><h3>{currentReview.title}</h3><p>{currentReview.explanation}</p><div className="memory-association"><strong>Your visual association</strong><p>{currentReview.association}</p></div><div className="button-row center"><button className="button danger" onClick={()=>reviewRemember(false)}>↺ Need to revisit</button><button className="button primary" onClick={()=>reviewRemember(true)}><Check size={17}/> Remembered</button></div></div>:<><p className="muted">Try reconstructing the answer in your mind before looking.</p><button className="button primary" onClick={()=>setRevealed(true)}>Reveal memory →</button></>}</div></div></>:<div className="empty-review"><BookOpen size={44}/><h2>Nothing to recall yet</h2><p>Build a room, place furniture, and attach at least one concept and recall question.</p><button className="button primary" onClick={()=>setScreen('builder')}>Open builder</button></div>}</div>}
- </main>
- {screen==='builder'&&<nav className="mobile-tools"><button onClick={()=>setMode('select')}><Hand size={18}/> Select</button><button onClick={()=>setMode('room')}><Grid2X2 size={18}/> Rooms</button><button onClick={()=>setMode('furniture')}><Plus size={18}/> Objects</button><button onClick={()=>setScreen('review')}><Brain size={18}/> Recall</button></nav>}
- {showCreate&&<Modal title="Create a knowledge fortress" onClose={()=>setShowCreate(false)}><p className="muted">Build your own world from an empty grid. Name the subject you want to remember.</p><form onSubmit={e=>{e.preventDefault();create()}} className="dialog-form"><label>Fortress name<input autoFocus maxLength={80} required placeholder="e.g. Machine Learning" value={newName} onChange={e=>setNewName(e.target.value)}/></label><div className="button-row end"><button type="button" className="button ghost" onClick={()=>setShowCreate(false)}>Cancel</button><button className="button primary">Create fortress</button></div></form></Modal>}
- {currentEdit&&<Modal title={'Memory at '+objectLabel(currentEdit.kind)} onClose={()=>setEditItem(null)}><p className="muted">Link what you learned to this object. Unusual imagery helps the location become a stronger retrieval cue.</p><form className="dialog-form" key={currentEdit.id} onSubmit={e=>{e.preventDefault();updateNote(new FormData(e.currentTarget))}}><label>Concept title<input name="title" maxLength={120} defaultValue={currentEdit.title} placeholder="Shared memory between threads" required/></label><label>Explanation<textarea name="explanation" maxLength={2500} rows={4} defaultValue={currentEdit.explanation} required placeholder="Explain the concept in your own words"/></label><label>Vivid visual association<textarea name="association" maxLength={1600} rows={3} defaultValue={currentEdit.association} required placeholder="Four chefs all share one refrigerator..."/></label><label>Active recall question<textarea name="cue" maxLength={600} rows={2} defaultValue={currentEdit.cue} required placeholder="Which resources do threads share?"/></label><div className="button-row end"><button type="button" className="button ghost" onClick={()=>setEditItem(null)}>Cancel</button><button className="button primary" type="submit"><Save size={16}/> Save memory</button></div></form></Modal>}
- <input ref={fileInput} hidden type="file" accept="application/json,.json" onChange={e=>void importBackup(e.target.files?.[0])}/>
- {toast&&<div role="status" className="toast">{toast}</div>}
+ const [message,setMessage]=useState('')
+ const p=state.palaces.find(q=>q.id===selected)??null
+ const memories=useMemo(()=>p?listSceneMemories(p):[],[p,screen,reviewIndex])
+ const active=memories[reviewIndex%Math.max(memories.length,1)]
+ const rememberedCount=p?.reviews.filter(r=>r.remembered).length??0
+ function persist(next:State){try{localStorage.setItem(stateKey,JSON.stringify(next));setState(next)}catch{setMessage('Storage is full. Please export your fortresses.')}}
+ function create(e:React.FormEvent){e.preventDefault();const name=newName.trim();if(!name)return;const palace=fresh(name);persist({palaces:[palace,...state.palaces]});setShowCreate(false);setNewName('');open(palace.id)}
+ function open(id:string){setSelected(id);setScreen('editor');setReviewIndex(0);setRevealed(false)}
+ function startReview(){setReviewIndex(0);setRevealed(false);setScreen('review')}
+ function grade(remembered:boolean){if(!p||!active)return;persist({palaces:state.palaces.map(v=>v.id===p.id?{...v,reviews:[...v.reviews,{itemId:active.id,remembered,at:new Date().toISOString()}]}:v)});setReviewIndex(v=>v+1);setRevealed(false)}
+ function remove(id:string){if(!confirm('Delete this fortress and all its saved memories?'))return;localStorage.removeItem(sceneKey(id));persist({palaces:state.palaces.filter(v=>v.id!==id)});setScreen('library');setSelected(null)}
+ function exportAll(){
+  const scenes:Backup['scenes']={}
+  for(const palace of state.palaces)scenes[palace.id]=loadScene(palace)
+  const backup:Backup={kind:'mindfort-workspace-v2',state,scenes}
+  download('mindfort-all-fortresses.json',JSON.stringify(backup,null,2))
+ }
+ async function importAll(file?:File){
+  if(!file)return
+  try{
+   if(file.size>12000000)throw Error('Backup too large')
+   const obj=JSON.parse(await file.text()) as unknown
+   if(!obj||typeof obj!=='object')throw Error('Invalid backup')
+   const b=obj as Backup
+   if(b.kind!=='mindfort-workspace-v2'||!b.state||!Array.isArray(b.state.palaces)||!b.state.palaces.every(isPalace)||!b.scenes||typeof b.scenes!=='object')throw Error('Invalid backup structure')
+   if(!confirm('Replace all local fortresses and their canvas scenes with this backup?'))return
+   for(const palace of b.state.palaces){const scene=b.scenes[palace.id];if(scene&&Array.isArray(scene.elements)&&scene.notes&&scene.files)localStorage.setItem(sceneKey(palace.id),JSON.stringify(scene))}
+   persist(b.state);setSelected(null);setScreen('library');setMessage('Backup restored')
+  }catch(err){setMessage(err instanceof Error?err.message:'Invalid backup')}
+  finally{setShowImport(false)}
+ }
+ if(screen==='editor'&&p)return <Workspace key={p.id} palace={p} onBack={()=>setScreen('library')} onRecall={startReview}/>
+ return <div className="mf-shell">
+  <header className="mf-top">
+   <button className="mf-logo" onClick={()=>setScreen('library')}><span><Shield size={21}/></span>mindfort<b>.</b></button>
+   <nav><button className={screen==='library'?'active':''} onClick={()=>setScreen('library')}><LayoutTemplate size={16}/> Fortresses</button>{p&&<button onClick={()=>open(p.id)}><BookOpen size={16}/> Open canvas</button>}</nav>
+   <div className="mf-head-actions"><button onClick={exportAll}><Download size={16}/> Export all</button><button onClick={()=>setShowImport(true)}><Upload size={16}/> Import</button></div>
+  </header>
+  {screen==='library'&&<main className="mf-library">
+   <section className="mf-hero"><BlurFade className="mf-hero-text"><div className="mf-kicker">A CANVAS FOR YOUR MIND</div><h1>Think freely.<br/><em>Remember spatially.</em></h1><p>Everything you love about drawing on a whiteboard, now connected to a memory palace. Sketch a house, place ideas anywhere, then practice remembering them.</p><button className="mf-cta" onClick={()=>setShowCreate(true)}><Plus size={19}/> Create a fortress</button></BlurFade><BlurFade delay={.12} className="mf-hero-graphic"><FortressBlueprint/></BlurFade></section>
+   <section className="mf-library-section"><div className="mf-section-heading"><div><div className="mf-kicker">YOUR MEMORY WORLDS</div><h2>Fortresses</h2></div><span>{state.palaces.length} spaces</span></div>
+   <div className="mf-fortresses">{state.palaces.map((fortress,i)=><MagicCard key={fortress.id} className="mf-fort-card"><button onClick={()=>open(fortress.id)} className="mf-fort-open"><div className={'mf-fort-image tone-'+i%3}><FortressBlueprint compact/></div><div className="mf-fort-description"><span>KNOWLEDGE CANVAS</span><h3>{fortress.name}</h3><p>{fortress.rooms.length?fortress.rooms.length+' legacy rooms · ':''}{fortress.items.length?fortress.items.length+' existing objects · ':''}{fortress.reviews.length} reviews</p><strong>Open canvas <ArrowLeft size={14}/></strong></div></button><button title={'Delete '+fortress.name} aria-label={'Delete '+fortress.name} className="mf-fort-delete" onClick={()=>remove(fortress.id)}><Trash2 size={15}/></button></MagicCard>)}
+   <button className="mf-add-fort" onClick={()=>setShowCreate(true)}><FolderPlus size={34}/><strong>New memory fortress</strong><span>A blank Excalidraw canvas awaits.</span></button></div></section>
+   <section className="mf-feature-strip"><div><span>01 / DRAW</span><h3>Build your world</h3><p>Sketch rooms, objects, maps and paths using real Excalidraw tools.</p></div><div><span>02 / ANCHOR</span><h3>Link a memory</h3><p>Select a shape and attach an explanation and vivid mental association.</p></div><div><span>03 / RECALL</span><h3>Bring it back</h3><p>Test what you remember without looking at the answers.</p></div></section>
+  </main>}
+  {screen==='review'&&p&&<main className="mf-review"><button className="mf-review-back" onClick={()=>open(p.id)}><ArrowLeft size={17}/> Back to canvas</button><div className="mf-kicker">RECALL PRACTICE</div><h1>Explore what you remember.</h1><p className="mf-review-intro">Picture the shape and place where you stored the idea. Answer first. Reveal second.</p>
+   {active?<article className="mf-review-card"><div className="mf-review-label">MEMORY {reviewIndex%memories.length+1} OF {memories.length} · {rememberedCount} RECALLS</div><h2>{active.cue}</h2>{revealed?<div className="mf-review-answer"><h3>{active.title}</h3><p>{active.explanation}</p><div className="mf-association"><strong><Sparkles size={16}/> Visual association</strong><p>{active.association}</p></div><div className="mf-review-controls"><button onClick={()=>grade(false)}>Need to revisit</button><button onClick={()=>grade(true)}><Check size={17}/> Remembered</button></div></div>:<><p>Recall the answer and its visual association before revealing.</p><button className="mf-cta" onClick={()=>setRevealed(true)}>Reveal memory</button></>}</article>:<div className="mf-review-empty"><Brain size={40}/><h2>No memories attached yet</h2><p>Draw a shape in your fortress, select it, and attach an explanation and recall question.</p><button className="mf-cta" onClick={()=>open(p.id)}>Go to canvas</button></div>}
+  </main>}
+  {showCreate&&<div className="mf-modal-overlay" onMouseDown={e=>{if(e.target===e.currentTarget)setShowCreate(false)}}><section className="mf-modal" role="dialog" aria-label="Create a knowledge fortress" aria-modal="true"><div className="mf-modal-header"><div><div className="mf-kicker">NEW KNOWLEDGE WORLD</div><h2>Name your fortress</h2></div><button aria-label="Close" onClick={()=>setShowCreate(false)}><X size={18}/></button></div><form className="mf-form" onSubmit={create}><label>Fortress name<input required autoFocus placeholder="e.g. Operating Systems" maxLength={80} value={newName} onChange={e=>setNewName(e.target.value)}/></label><p>Start with a blank Excalidraw canvas. Draw any shape and add memories as you learn.</p><div className="mf-form-actions"><button type="button" onClick={()=>setShowCreate(false)}>Cancel</button><button className="mf-cta" type="submit">Create fortress</button></div></form></section></div>}
+  {showImport&&<div className="mf-modal-overlay"><section className="mf-modal" role="dialog" aria-modal="true" aria-label="Import Mindfort backup"><div className="mf-modal-header"><h2>Import your fortresses</h2><button aria-label="Close" onClick={()=>setShowImport(false)}><X size={18}/></button></div><p>Choose a Mindfort all-fortresses JSON backup. This replaces your existing data after confirmation.</p><input aria-label="Backup file" type="file" accept=".json,application/json" onChange={e=>void importAll(e.target.files?.[0])}/></section></div>}
+  {message&&<div role="status" className="mf-notice" onClick={()=>setMessage('')}>{message}<X size={15}/></div>}
  </div>
 }
