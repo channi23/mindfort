@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Excalidraw, convertToExcalidrawElements, MainMenu, WelcomeScreen } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
-import { ArrowLeft, BookOpen, Brain, Check, Download, Edit3, FilePlus2, Home, Save, Sparkles, X } from 'lucide-react'
+import { ArrowLeft, Brain, Check, Download, Edit3, FilePlus2, Save, Sparkles, X } from 'lucide-react'
 import type { ExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import type { ExcalidrawImperativeAPI, BinaryFiles } from '@excalidraw/excalidraw/types'
 import type { Palace } from '../model'
-import { useRef as useStableRef } from 'react'
 
 export type MemoryNote={title:string;explanation:string;association:string;cue:string}
 export type SceneRecord={elements:readonly ExcalidrawElement[];files:BinaryFiles;notes:Record<string,MemoryNote>;appState?:{viewBackgroundColor?:string}}
@@ -37,7 +36,7 @@ function download(filename:string,content:string) {
 const safeName=(name:string)=>name.replace(/[^a-z0-9-_]+/gi,'-').slice(0,48)||'fortress'
 export function Workspace({palace,onBack,onRecall}:{palace:Palace;onBack:()=>void;onRecall:()=>void}){
  const initial=useMemo(()=>loadScene(palace),[palace.id])
- const sceneRef=useStableRef<SceneRecord>(initial)
+ const sceneRef=useRef<SceneRecord>(initial)
  const api=useRef<ExcalidrawImperativeAPI|null>(null)
  const selectedRef=useRef('')
  const [selectedId,setSelectedId]=useState<string|null>(null)
@@ -87,7 +86,6 @@ export function Workspace({palace,onBack,onRecall}:{palace:Palace;onBack:()=>voi
   download(safeName(palace.name)+'-mindfort-scene.json',JSON.stringify({kind:'mindfort-scene-v1',name:palace.name,...sceneRef.current},null,2))
  }
  function addRoom(){api.current?.setActiveTool({type:'rectangle'})}
- function isSelectedValid(){return Boolean(selectedId&&sceneRef.current.elements.some(el=>el.id===selectedId&&!el.isDeleted))}
  return <div className="mf-editor-page">
   <header className="mf-editor-topbar">
    <div className="mf-editor-left"><button onClick={onBack} aria-label="Back to fortresses" className="mf-back"><ArrowLeft size={18}/></button><div><div className="mf-overline">MINDFORT / KNOWLEDGE CANVAS</div><strong>{palace.name}</strong></div></div>
