@@ -8,7 +8,7 @@ test('creating a fortress retains input focus while typing and opens the editor'
  await field.pressSequentially('My Memory Castle',{delay:45})
  await expect(field).toBeFocused()
  await expect(field).toHaveValue('My Memory Castle')
- await page.getByRole('button',{name:'Create fortress',exact:true}).click()
+ await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
  await expect(page.getByRole('heading',{name:'My Memory Castle'})).toBeVisible()
  await expect(page.getByText('Start with a room')).toBeVisible()
 })
@@ -16,7 +16,7 @@ test('creating a fortress retains input focus while typing and opens the editor'
 test('build a room, place furniture, attach knowledge, and recall it',async({page})=>{
  await page.getByRole('button',{name:'Build a fortress'}).click()
  await page.getByRole('textbox',{name:'Fortress name'}).fill('Computer Science')
- await page.getByRole('button',{name:'Create fortress',exact:true}).click()
+ await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
  await page.getByRole('button',{name:'Draw a room'}).click()
  const board=page.locator('.board')
  const rect=await board.boundingBox()
@@ -57,7 +57,7 @@ test('escape closes the create modal without destroying the underlying page',asy
 test('reload keeps a newly-created fortress in browser storage',async({page})=>{
  await page.getByRole('button',{name:'Build a fortress'}).click()
  await page.getByRole('textbox',{name:'Fortress name'}).fill('Persistence Check')
- await page.getByRole('button',{name:'Create fortress',exact:true}).click()
+ await page.getByRole('dialog',{name:'Create a knowledge fortress'}).getByRole('button',{name:'Create fortress',exact:true}).click()
  await page.reload()
  await expect(page.getByText('Persistence Check').first()).toBeVisible()
 })
